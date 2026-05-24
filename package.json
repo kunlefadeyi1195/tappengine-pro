@@ -12,7 +12,7 @@
     "next": "15.4.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "lightweight-charts": "^4.2.0",
+    "lightweight-charts": "4.2.3",
     "lucide-react": "^0.469.0",
     "recharts": "^2.13.0"
   },

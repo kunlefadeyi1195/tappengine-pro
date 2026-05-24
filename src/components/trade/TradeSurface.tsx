@@ -3,14 +3,17 @@
 import { useState } from "react";
 import { useQuotes } from "@/lib/hooks/useMarket";
 import { OrderTicket } from "./OrderTicket";
+import { PriceChart } from "./PriceChart";
+import { OptionsBuilder } from "./OptionsBuilder";
 import { fmt, aiRatingColor } from "@/lib/data/seed";
-import { Star } from "lucide-react";
+import { Star, SlidersHorizontal } from "lucide-react";
 
 const WATCH = ["NVDA", "MU", "ASML", "GEV", "CEG", "NOW", "CRM", "MSFT", "AVGO", "QQQ", "SMH", "VTI"];
 
 export function TradeSurface() {
   const quotes = useQuotes();
   const [active, setActive] = useState("NVDA");
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const q = quotes[active];
 
   return (
@@ -50,16 +53,23 @@ export function TradeSurface() {
               </span>
             </div>
             <div className="text-[13px] mt-1" style={{ color: "var(--color-dim)" }}>{q.name} · {q.symbol} · {q.sector}</div>
-            <div className="mt-3 inline-flex items-center gap-2 text-[13px] px-3 py-1.5 rounded-lg" style={{ background: "var(--color-inset)" }}>
-              AI rating: <span className="font-semibold" style={{ color: aiRatingColor(q.aiRating) }}>{q.aiRating}</span>
-              <span style={{ color: "var(--color-faint)" }}>· score {q.aiScore}/100</span>
+            <div className="mt-3 flex items-center gap-2.5">
+              <div className="inline-flex items-center gap-2 text-[13px] px-3 py-1.5 rounded-lg" style={{ background: "var(--color-inset)" }}>
+                AI rating: <span className="font-semibold" style={{ color: aiRatingColor(q.aiRating) }}>{q.aiRating}</span>
+                <span style={{ color: "var(--color-faint)" }}>· score {q.aiScore}/100</span>
+              </div>
+              <button onClick={() => setOptionsOpen(true)} className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1.5 rounded-lg" style={{ background: "var(--color-accent-soft)", color: "var(--color-accent)" }}>
+                <SlidersHorizontal size={14} /> Options &amp; Strategies
+              </button>
             </div>
-            <div className="mt-6 rounded-xl p-8 text-center text-[13px]" style={{ background: "var(--color-panel)", border: "1px dashed var(--color-line)", color: "var(--color-faint)" }}>
-              Interactive candlestick chart arrives in the next stage (lightweight-charts integration).
+            <div className="mt-6">
+              <PriceChart quote={q} />
             </div>
           </>
         )}
       </div>
+
+      {optionsOpen && <OptionsBuilder quote={q} onClose={() => setOptionsOpen(false)} />}
 
       {/* right: order ticket */}
       <div className="w-[320px] border-l sc overflow-auto" style={{ borderColor: "var(--color-line)", background: "var(--color-panel)" }}>
