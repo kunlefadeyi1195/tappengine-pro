@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Quote, Order, Position } from "@/lib/types";
 import { marketData } from "@/lib/data/marketData";
 import { brokerage } from "@/lib/data/brokerage";
+import { advisory } from "@/lib/data/advisory";
 
 // Live quotes hook — subscribes to the market data source.
 export function useQuotes(): Record<string, Quote> {
@@ -23,5 +24,14 @@ export function useBrokerage(): { positions: Position[]; orders: Order[] } {
     (cb) => brokerage.onChange(cb),
     () => brokerage.getSnapshot(),
     () => brokerage.getSnapshot()
+  );
+}
+
+// Advisory state (compliance, suitability, allocations).
+export function useAdvisory() {
+  return useSyncExternalStore(
+    (cb) => advisory.onChange(cb),
+    () => advisory.getSnapshot(),
+    () => advisory.getSnapshot()
   );
 }

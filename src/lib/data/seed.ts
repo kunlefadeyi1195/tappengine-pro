@@ -34,7 +34,8 @@ export const INITIAL_POSITIONS: Position[] = [
 
 export const MODELS: ModelPortfolio[] = [
   {
-    id: "ai-infra", name: "AI Infrastructure Growth", manager: "TE Advisors", risk: "Aggressive",
+    id: "ai-infra", name: "AI Infrastructure Growth", manager: "TE Advisors", productType: "discretionary",
+    risk: "Aggressive", riskScore: 5, advisoryFeePct: 0.65, minInvestment: 25000,
     ytdReturn: 24.6, sinceInception: 61.2, allocated: 184200,
     holdings: [
       { symbol: "NVDA", targetWeight: 24 }, { symbol: "AVGO", targetWeight: 18 }, { symbol: "ASML", targetWeight: 14 },
@@ -43,7 +44,8 @@ export const MODELS: ModelPortfolio[] = [
     actualWeights: { NVDA: 28.4, AVGO: 16.1, ASML: 13.2, MU: 10.8, SMH: 14.0, NOW: 9.9, MSFT: 7.6 },
   },
   {
-    id: "power-grid", name: "Power & Electrification", manager: "TE Advisors", risk: "Growth",
+    id: "power-grid", name: "Power & Electrification", manager: "TE Advisors", productType: "discretionary",
+    risk: "Growth", riskScore: 4, advisoryFeePct: 0.55, minInvestment: 10000,
     ytdReturn: 18.1, sinceInception: 33.4, allocated: 92000,
     holdings: [
       { symbol: "GEV", targetWeight: 30 }, { symbol: "CEG", targetWeight: 28 }, { symbol: "VTI", targetWeight: 22 }, { symbol: "QQQ", targetWeight: 20 },
@@ -51,12 +53,39 @@ export const MODELS: ModelPortfolio[] = [
     actualWeights: { GEV: 31.2, CEG: 26.4, VTI: 22.1, QQQ: 20.3 },
   },
   {
-    id: "balanced", name: "Core Balanced 60/40", manager: "TE Advisors", risk: "Moderate",
+    id: "balanced", name: "Core Balanced 60/40", manager: "TE Advisors", productType: "discretionary",
+    risk: "Moderate", riskScore: 3, advisoryFeePct: 0.35, minInvestment: 5000,
     ytdReturn: 9.2, sinceInception: 14.8, allocated: 0,
     holdings: [{ symbol: "VTI", targetWeight: 40 }, { symbol: "QQQ", targetWeight: 20 }, { symbol: "VTSAX", targetWeight: 40 }],
     actualWeights: {},
   },
+  {
+    id: "semi-momentum", name: "Semiconductor Momentum (Template)", manager: "TAPP Engine", productType: "self-directed",
+    risk: "Aggressive", riskScore: 5, advisoryFeePct: 0, minInvestment: 0,
+    ytdReturn: 29.3, sinceInception: 54.0, allocated: 0,
+    holdings: [{ symbol: "NVDA", targetWeight: 30 }, { symbol: "AVGO", targetWeight: 25 }, { symbol: "MU", targetWeight: 20 }, { symbol: "SMH", targetWeight: 25 }],
+    actualWeights: {},
+  },
 ];
+
+// Prototype account state. Defaults: KYC done, but NOT yet onboarded to advisory.
+// Real values come from the onboarding/CRM system behind the BrokerageSource seam.
+export const INITIAL_COMPLIANCE = {
+  kycVerified: true,
+  imaSigned: false,
+  discretionGranted: false,
+  advCrsDelivered: false,
+  regBiAck: false,
+};
+
+export const INITIAL_SUITABILITY = {
+  completed: false,
+  riskTolerance: "Growth" as const,
+  riskScore: 4,
+  horizonYears: 10,
+  liquidityNeed: "medium" as const,
+  updatedAt: null,
+};
 
 export const CASH_BALANCE = 168420;
 

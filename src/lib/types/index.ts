@@ -82,16 +82,56 @@ export interface ModelHolding {
   targetWeight: number;
 }
 
+// "discretionary" = TE Advisors manages the sleeve under an IMA (RIA path).
+// "self-directed" = user copies target weights into their own account (BD path).
+export type ModelProductType = "discretionary" | "self-directed";
+
 export interface ModelPortfolio {
   id: string;
   name: string;
   manager: string;
+  productType: ModelProductType;
   risk: "Conservative" | "Moderate" | "Growth" | "Aggressive";
+  riskScore: number;            // 1-5, for suitability matching against profile
+  advisoryFeePct: number;       // annual advisory fee for discretionary sleeves
+  minInvestment: number;
   ytdReturn: number;
   sinceInception: number;
   allocated: number;
   holdings: ModelHolding[];
   actualWeights: Record<string, number>;
+}
+
+// ---- Suitability & account compliance state ----
+// NOTE: placeholder structure for a prototype. Real questionnaire content,
+// scoring rules, fee schedule, and disclosures must be defined by the RIA/CCO.
+export type RiskTolerance = "Conservative" | "Moderate" | "Growth" | "Aggressive";
+
+export interface SuitabilityProfile {
+  completed: boolean;
+  riskTolerance: RiskTolerance;
+  riskScore: number;            // 1-5 derived from questionnaire
+  horizonYears: number;
+  liquidityNeed: "low" | "medium" | "high";
+  updatedAt: number | null;
+}
+
+// Account-level, one-time gates (checked once, then stored).
+export interface AccountCompliance {
+  kycVerified: boolean;
+  imaSigned: boolean;           // investment management agreement (discretionary)
+  discretionGranted: boolean;
+  advCrsDelivered: boolean;     // Form ADV 2A/2B + Form CRS
+  regBiAck: boolean;            // best-interest acknowledgment (self-directed)
+}
+
+// A user's allocation into a model.
+export interface ModelAllocation {
+  id: string;
+  modelId: string;
+  productType: ModelProductType;
+  amount: number;
+  createdAt: number;
 }
 
 // Data-access interface — the seam. Swap the mock impl for a real one later.

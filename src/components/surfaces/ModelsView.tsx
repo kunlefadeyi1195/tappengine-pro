@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuotes } from "@/lib/hooks/useMarket";
+import { useQuotes, useAdvisory } from "@/lib/hooks/useMarket";
 import { MODELS, fmt, fmtUSD, fmtPct, aiRatingColor } from "@/lib/data/seed";
 import { AreaChart, Area, YAxis, ResponsiveContainer, Tooltip } from "recharts";
-import { Plus } from "lucide-react";
+import { Plus, Copy } from "lucide-react";
+import { ModelInvestFlow } from "./ModelInvestFlow";
 
 export function ModelsView() {
   const quotes = useQuotes();
+  const { allocations } = useAdvisory();
   const [selected, setSelected] = useState(MODELS[0].id);
+  const [investOpen, setInvestOpen] = useState(false);
   const model = MODELS.find((m) => m.id === selected)!;
+  const userAllocated = allocations.filter((a) => a.modelId === model.id).reduce((s, a) => s + a.amount, 0);
 
   const perf = useMemo(() => {
     const out: { t: number; v: number }[] = [];
@@ -53,17 +57,25 @@ export function ModelsView() {
         <div className="flex justify-between items-start mb-5">
           <div>
             <h1 className="font-display text-[28px]">{model.name}</h1>
-            <div className="text-[12.5px] mt-1.5" style={{ color: "var(--color-dim)" }}>{model.manager} · {model.risk} risk · Rebalanced quarterly · TWR (continuous)</div>
+            <div className="text-[12.5px] mt-1.5 flex items-center gap-2" style={{ color: "var(--color-dim)" }}>
+              <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold" style={{ background: model.productType === "discretionary" ? "var(--color-accent-soft)" : "var(--color-subtle)", color: model.productType === "discretionary" ? "var(--color-accent)" : "var(--color-dim)" }}>
+                {model.productType === "discretionary" ? "DISCRETIONARY" : "SELF-DIRECTED"}
+              </span>
+              {model.manager} · {model.risk} risk · {model.productType === "discretionary" ? `${fmt(model.advisoryFeePct)}% advisory fee` : "no advisory fee"}
+            </div>
           </div>
-          {model.allocated > 0 ? (
-            <div className="px-4 h-[38px] flex items-center rounded-lg text-[13px]" style={{ background: "var(--color-subtle)", border: "1px solid var(--color-line)" }}>Allocated {fmtUSD(model.allocated, 0)}</div>
-          ) : (
-            <button className="px-4 h-[38px] flex items-center gap-1.5 rounded-lg text-[13px] font-semibold text-white" style={{ background: "var(--color-accent)" }}><Plus size={15} /> Allocate to Sleeve</button>
-          )}
+          <div className="flex items-center gap-2">
+            {userAllocated > 0 && (
+              <div className="px-3 h-[38px] flex items-center rounded-lg text-[13px]" style={{ background: "var(--color-subtle)", border: "1px solid var(--color-line)" }}>You: {fmtUSD(userAllocated, 0)}</div>
+            )}
+            <button onClick={() => setInvestOpen(true)} className="px-4 h-[38px] flex items-center gap-1.5 rounded-lg text-[13px] font-semibold text-white" style={{ background: "var(--color-accent)" }}>
+              {model.productType === "discretionary" ? <><Plus size={15} /> Invest in Sleeve</> : <><Copy size={15} /> Copy to My Account</>}
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-3.5 mb-4">
-          {([["YTD Return", fmtPct(model.ytdReturn), "var(--color-up)"], ["Since Inception", fmtPct(model.sinceInception), "var(--color-content)"], ["Holdings", String(model.holdings.length), "var(--color-content)"], ["Expense", "0.35%", "var(--color-content)"]] as const).map(([l, v, c]) => (
+          {([["YTD Return", fmtPct(model.ytdReturn), "var(--color-up)"], ["Since Inception", fmtPct(model.sinceInception), "var(--color-content)"], ["Holdings", String(model.holdings.length), "var(--color-content)"], [model.productType === "discretionary" ? "Advisory Fee" : "Min. Invest", model.productType === "discretionary" ? fmt(model.advisoryFeePct) + "%" : fmtUSD(model.minInvestment, 0), "var(--color-content)"]] as const).map(([l, v, c]) => (
             <div key={l} className="flex-1 rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
               <div className="text-[11px]" style={{ color: "var(--color-faint)" }}>{l}</div>
               <div className="num font-display text-[22px] mt-1" style={{ color: c }}>{v}</div>
@@ -112,6 +124,8 @@ export function ModelsView() {
           </table>
         </div>
       </div>
+
+      {investOpen && <ModelInvestFlow model={model} onClose={() => setInvestOpen(false)} />}
     </div>
   );
 }
