@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* Dark mode via class strategy */
+@variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   TAPP Engine Pro — Design Tokens (from brand sheet)
+   Tailwind v4 CSS-first @theme configuration
+   ============================================================ */
+@theme {
+  /* Brand fonts */
+  --font-display: "Gelasio", Georgia, serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+
+  /* Light theme (brand default) */
+  --color-bg: #f7f9fc;
+  --color-panel: #ffffff;
+  --color-panel2: #f4f6fb;
+  --color-inset: #eef2fe;
+  --color-content: #0d1228;
+  --color-dim: #4a5163;
+  --color-faint: #9aa0b4;
+  --color-accent: #4361fb;
+  --color-accent-hover: #3a4fd6;
+  --color-accent-active: #1f2a6b;
+  --color-accent-soft: #e4e7fb;
+  --color-line: #dbe0ea;
+  --color-line-hover: #b9c0cc;
+  --color-subtle: #edeff3;
+  --color-subtle-hover: #e2e5ec;
+  --color-up: #0fa86b;
+  --color-down: #f5333f;
+  --color-hold: #c99a00;
+  --color-navy: #0d1228;
+  --color-error: #f5333f;
+}
+
+/* Dark theme token overrides */
+.dark {
+  --color-bg: #070a16;
+  --color-panel: #0e1322;
+  --color-panel2: #161c2e;
+  --color-inset: #11182b;
+  --color-content: #edeff5;
+  --color-dim: #8a92a8;
+  --color-faint: #5c6680;
+  --color-accent: #5a72ff;
+  --color-accent-hover: #6e83ff;
+  --color-accent-active: #3a4fd6;
+  --color-accent-soft: rgba(90, 114, 255, 0.16);
+  --color-line: #20283c;
+  --color-line-hover: #2c3650;
+  --color-subtle: #161c2e;
+  --color-subtle-hover: #1e2640;
+  --color-up: #16b57f;
+  --color-down: #ff5470;
+  --color-hold: #e0b33a;
+  --color-navy: #0b0f1c;
+}
+
+@layer base {
+  html, body {
+    background: var(--color-bg);
+    color: var(--color-content);
+    font-family: var(--font-sans);
+  }
+  .font-display { font-family: var(--font-display); }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+}
+
+/* Up/down semantic helpers */
+.text-up { color: var(--color-up); }
+.text-down { color: var(--color-down); }
+.bg-up-soft { background: color-mix(in srgb, var(--color-up) 12%, transparent); }
+.bg-down-soft { background: color-mix(in srgb, var(--color-down) 10%, transparent); }
+
+/* Scrollbar */
+.sc::-webkit-scrollbar { width: 8px; height: 8px; }
+.sc::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 4px; }
+.sc::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-slide-in { animation: slideIn 0.35s ease-out; }
+.animate-pulse-dot { animation: pulseDot 2s infinite; }
+.animate-spin-slow { animation: spin 1s linear infinite; }
