@@ -11,13 +11,32 @@ export function PositionsView() {
 
   const rows = positions.map((p) => {
     const q = quotes[p.symbol];
+    const isOption = p.instrument === "option" && p.option;
+
+    if (isOption && p.option) {
+      const S = q?.price ?? p.option.legs[0].strike;
+      // Current strategy value per share = sum of leg intrinsic with long/short sign.
+      const curPerShare = p.option.legs.reduce((a, l) => {
+        const intrinsic = l.right === "call" ? Math.max(0, S - l.strike) : Math.max(0, l.strike - S);
+        return a + (l.action === "long" ? 1 : -1) * intrinsic * l.qty;
+      }, 0);
+      // Cost basis per share is the net price paid (debit positive).
+      const costPerShare = p.option.netPrice;
+      const mult = 100; // contracts to shares
+      const mktValue = curPerShare * mult;
+      const cost = costPerShare * mult;
+      const pl = mktValue - cost;
+      const plPct = cost !== 0 ? (pl / Math.abs(cost)) * 100 : 0;
+      return { ...p, q, price: curPerShare, mktValue, pl, plPct, dayChange: 0, isOption: true as const };
+    }
+
     const price = q?.price ?? p.avgCost;
     const mktValue = p.shares * price;
     const cost = p.shares * p.avgCost;
     const pl = mktValue - cost;
     const plPct = (pl / cost) * 100;
     const dayChange = q ? p.shares * q.change : 0;
-    return { ...p, q, price, mktValue, pl, plPct, dayChange };
+    return { ...p, q, price, mktValue, pl, plPct, dayChange, isOption: false as const };
   });
 
   const totalValue = rows.reduce((a, r) => a + r.mktValue, 0);
@@ -50,18 +69,24 @@ export function PositionsView() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.symbol} className="border-t" style={{ borderColor: "var(--color-subtle)" }}>
+            {rows.map((r, idx) => (
+              <tr key={r.symbol + "-" + idx} className="border-t" style={{ borderColor: "var(--color-subtle)" }}>
                 <td className="py-2.5 px-4">
                   <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded mr-2" style={{ color: "var(--color-accent)", background: "var(--color-accent-soft)" }}>{r.symbol}</span>
+                  {r.isOption && r.option && (
+                    <span className="text-[11px]" style={{ color: "var(--color-dim)" }}>
+                      {r.option.strategy} · {r.option.expiry}
+                      <span className="text-[9.5px] ml-1.5 px-1 py-0.5 rounded" style={{ background: "var(--color-subtle)", color: "var(--color-faint)" }}>OPT</span>
+                    </span>
+                  )}
                 </td>
-                <td className="num text-right" style={{ color: "var(--color-dim)" }}>{r.shares}</td>
+                <td className="num text-right" style={{ color: "var(--color-dim)" }}>{r.shares}{r.isOption ? "c" : ""}</td>
                 <td className="num text-right" style={{ color: "var(--color-dim)" }}>{fmt(r.avgCost)}</td>
                 <td className="num text-right">{fmt(r.price)}</td>
-                <td className="num text-right">{fmtUSD(r.mktValue, 0)}</td>
-                <td className="num text-right" style={{ color: r.dayChange >= 0 ? "var(--color-up)" : "var(--color-down)" }}>{r.dayChange >= 0 ? "+" : ""}{fmtUSD(r.dayChange, 0)}</td>
+                <td className="num text-right">{(r.mktValue < 0 ? "-" : "") + fmtUSD(r.mktValue, 0)}</td>
+                <td className="num text-right" style={{ color: r.dayChange >= 0 ? "var(--color-up)" : "var(--color-down)" }}>{r.isOption ? "—" : (r.dayChange >= 0 ? "+" : "") + fmtUSD(r.dayChange, 0)}</td>
                 <td className="num text-right py-2.5 px-4" style={{ color: r.pl >= 0 ? "var(--color-up)" : "var(--color-down)" }}>{r.pl >= 0 ? "+" : ""}{fmtUSD(r.pl, 0)} ({fmtPct(r.plPct)})</td>
-                <td className="text-right pr-4 font-semibold" style={{ color: r.q ? aiRatingColor(r.q.aiRating) : "var(--color-faint)" }}>{r.q?.aiRating ?? "—"}</td>
+                <td className="text-right pr-4 font-semibold" style={{ color: r.q ? aiRatingColor(r.q.aiRating) : "var(--color-faint)" }}>{r.isOption ? "—" : r.q?.aiRating ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -122,9 +147,14 @@ export function PositionsView() {
               <tbody>
                 {recent.map((o) => (
                   <tr key={o.id} className="border-t" style={{ borderColor: "var(--color-subtle)" }}>
-                    <td className="py-2.5 px-4 font-semibold">{o.symbol}</td>
+                    <td className="py-2.5 px-4 font-semibold">
+                      {o.symbol}
+                      {o.instrument === "option" && o.option && (
+                        <span className="text-[10.5px] font-normal ml-1.5" style={{ color: "var(--color-faint)" }}>{o.option.strategy}</span>
+                      )}
+                    </td>
                     <td className="text-right capitalize" style={{ color: o.side === "buy" ? "var(--color-up)" : "var(--color-down)" }}>{o.side}</td>
-                    <td className="num text-right capitalize" style={{ color: "var(--color-dim)" }}>{o.type}</td>
+                    <td className="num text-right capitalize" style={{ color: "var(--color-dim)" }}>{o.instrument === "option" ? "option" : o.type}</td>
                     <td className="num text-right">{o.qty}</td>
                     <td className="num text-right">{o.avgFillPrice ? fmt(o.avgFillPrice) : "—"}</td>
                     <td className="text-right pr-4 capitalize" style={{ color: o.status === "filled" ? "var(--color-up)" : "var(--color-dim)" }}>{o.status}</td>

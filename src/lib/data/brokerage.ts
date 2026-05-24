@@ -25,7 +25,11 @@ class MockBrokerage implements BrokerageSource {
   placeOrder(draft: Omit<Order, "id" | "status" | "filledQty" | "createdAt">): Order {
     const id = "ord_" + Math.random().toString(36).slice(2, 9);
     const quotes = marketData.getQuotes();
-    const mkt = quotes[draft.symbol]?.price ?? draft.limitPrice ?? 0;
+    const isOption = draft.instrument === "option";
+    // For options, the fill "price" is the contract net price (per share); for equity it's the market price.
+    const mkt = isOption
+      ? (draft.option?.netPrice ?? draft.limitPrice ?? 0)
+      : (quotes[draft.symbol]?.price ?? draft.limitPrice ?? 0);
 
     // Market orders fill immediately; limit/stop start working then fill shortly (simulated).
     const fillsNow = draft.type === "market";
@@ -40,7 +44,7 @@ class MockBrokerage implements BrokerageSource {
     else {
       // simulate a working order filling after a short delay
       setTimeout(() => {
-        const fillPx = draft.limitPrice ?? draft.stopPrice ?? mkt;
+        const fillPx = isOption ? mkt : (draft.limitPrice ?? draft.stopPrice ?? mkt);
         order.status = "filled"; order.filledQty = order.qty; order.avgFillPrice = fillPx;
         this.applyFill(order, fillPx);
         this.emit();
@@ -51,8 +55,20 @@ class MockBrokerage implements BrokerageSource {
   }
 
   private applyFill(order: Order, price: number) {
+    // Options create a distinct option position; no share-averaging.
+    if (order.instrument === "option" && order.option) {
+      this.positions = [...this.positions, {
+        symbol: order.symbol,
+        shares: order.qty,          // contracts
+        avgCost: price,             // net price per share
+        source: "self-directed",
+        instrument: "option",
+        option: order.option,
+      }];
+      return;
+    }
     const dir = order.side === "buy" ? 1 : -1;
-    const existing = this.positions.find((p) => p.symbol === order.symbol && p.source === "self-directed");
+    const existing = this.positions.find((p) => p.symbol === order.symbol && p.source === "self-directed" && (p.instrument ?? "equity") === "equity");
     if (existing) {
       const newShares = existing.shares + dir * order.qty;
       if (newShares <= 0) {
@@ -64,7 +80,7 @@ class MockBrokerage implements BrokerageSource {
         existing.shares = newShares;
       }
     } else if (dir > 0) {
-      this.positions = [...this.positions, { symbol: order.symbol, shares: order.qty, avgCost: price, source: "self-directed" }];
+      this.positions = [...this.positions, { symbol: order.symbol, shares: order.qty, avgCost: price, source: "self-directed", instrument: "equity" }];
     }
   }
 

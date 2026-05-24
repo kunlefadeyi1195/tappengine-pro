@@ -20,12 +20,39 @@ export interface Quote {
   aiScore: number; // 0-100
 }
 
+// ---- Options ----
+export type OptionRight = "call" | "put";
+export type OptionAction = "long" | "short";
+
+// A single option leg in a contract/strategy.
+export interface OptionLeg {
+  right: OptionRight;
+  action: OptionAction;
+  strike: number;
+  qty: number;          // contracts (x100 multiplier)
+  premium: number;      // per-share premium
+}
+
+// Describes the option instrument attached to an order/position.
+// `legs` length 1 = single-leg; >1 = multi-leg strategy.
+export interface OptionContract {
+  underlying: string;
+  expiry: string;       // ISO date or "55d" style label for the mock
+  strategy: string;     // e.g. "Bull Call Spread" or "Single Call"
+  legs: OptionLeg[];
+  netPrice: number;     // net debit (+) / credit (-) per strategy, per-share basis
+}
+
+export type Instrument = "equity" | "option";
+
 export interface Position {
   symbol: string;
   shares: number;
   avgCost: number;
   source: "self-directed" | "model";
   modelId?: string;
+  instrument?: Instrument;   // defaults to "equity" when absent
+  option?: OptionContract;   // present when instrument === "option"
 }
 
 export type OrderSide = "buy" | "sell";
@@ -46,6 +73,8 @@ export interface Order {
   filledQty: number;
   avgFillPrice?: number;
   createdAt: number;
+  instrument?: Instrument;   // defaults to "equity" when absent
+  option?: OptionContract;   // present when instrument === "option"
 }
 
 export interface ModelHolding {

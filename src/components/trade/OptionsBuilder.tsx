@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, Plus, Minus, Trash2 } from "lucide-react";
-import type { Quote } from "@/lib/types";
+import { X, Plus, Minus, Trash2, CheckCircle2 } from "lucide-react";
+import type { Quote, OptionContract, OptionLeg } from "@/lib/types";
 import { bs, legPL, type Leg, type OptType, type OptSide } from "@/lib/options";
+import { brokerage } from "@/lib/data/brokerage";
 import { fmt, fmtUSD } from "@/lib/data/seed";
 
 const PRESETS: Record<string, { type: OptType; side: OptSide; off: number }[]> = {
@@ -29,6 +30,7 @@ export function OptionsBuilder({ quote, onClose }: { quote: Quote | undefined; o
   const [preset, setPreset] = useState("Covered Call");
   const [legs, setLegs] = useState<Leg[]>(() => PRESETS["Covered Call"].map((l) => mkLeg(l.type, l.side, l.off)));
   const [stockLeg, setStockLeg] = useState(true);
+  const [placed, setPlaced] = useState(false);
 
   const applyPreset = (name: string) => {
     setPreset(name);
@@ -68,6 +70,31 @@ export function OptionsBuilder({ quote, onClose }: { quote: Quote | undefined; o
     return bes;
   }, [payoff]);
 
+  // Net price per share (positive = debit paid, negative = credit received)
+  const netPerShare = legs.reduce((a, l) => a + (l.side === "long" ? 1 : -1) * l.premium * l.qty, 0);
+  const totalContracts = legs.reduce((a, l) => a + l.qty, 0);
+
+  const routeOrder = () => {
+    if (!quote || legs.length === 0) return;
+    const contract: OptionContract = {
+      underlying: quote.symbol,
+      expiry: `${Math.round(T * 365)}d`,
+      strategy: stockLeg && (preset === "Covered Call" || preset === "Protective Put") ? preset : (legs.length === 1 ? `Single ${legs[0].type === "call" ? "Call" : "Put"}` : preset),
+      legs: legs.map<OptionLeg>((l) => ({ right: l.type, action: l.side, strike: l.strike, qty: l.qty, premium: l.premium })),
+      netPrice: netPerShare,
+    };
+    brokerage.placeOrder({
+      symbol: quote.symbol,
+      side: netPerShare >= 0 ? "buy" : "sell",
+      type: "market",
+      qty: totalContracts,
+      tif: "day",
+      instrument: "option",
+      option: contract,
+    });
+    setPlaced(true);
+  };
+
   // SVG geometry
   const W = 620, H = 240, pL = 52, pR = 14, pT = 14, pB = 26;
   const xs = payoff.map((p) => p.st), pls = payoff.map((p) => p.pl);
@@ -78,6 +105,30 @@ export function OptionsBuilder({ quote, onClose }: { quote: Quote | undefined; o
   const Y = (pl: number) => pT + (1 - (pl - ymin) / ((ymax - ymin) || 1)) * (H - pT - pB);
   const zeroY = Y(0);
   const linePath = payoff.map((p, i) => `${i ? "L" : "M"}${X(p.st).toFixed(1)},${Y(p.pl).toFixed(1)}`).join(" ");
+
+  if (placed) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,10,22,0.55)" }} onClick={onClose}>
+        <div className="rounded-2xl w-full max-w-[440px] p-7 animate-slide-in" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }} onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-center text-center gap-3">
+            <CheckCircle2 size={42} style={{ color: "var(--color-up)" }} />
+            <div className="text-[17px] font-semibold">Strategy order submitted</div>
+            <div className="text-[13px]" style={{ color: "var(--color-dim)" }}>
+              {preset} on {quote?.symbol} · {legs.length} {legs.length === 1 ? "leg" : "legs"} · {totalContracts} {totalContracts === 1 ? "contract" : "contracts"}
+            </div>
+            <div className="text-[13px]" style={{ color: "var(--color-faint)" }}>
+              Net {netPerShare >= 0 ? "debit" : "credit"} {fmtUSD(Math.abs(netPerShare) * 100, 2)}/contract · filled at market
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button onClick={onClose} className="px-4 h-9 rounded-lg text-[13px] font-semibold text-white" style={{ background: "var(--color-accent)" }}>Done</button>
+              <button onClick={() => setPlaced(false)} className="px-4 h-9 rounded-lg text-[13px] font-semibold" style={{ background: "var(--color-subtle)", color: "var(--color-dim)" }}>Build another</button>
+            </div>
+            <div className="text-[11.5px] mt-1" style={{ color: "var(--color-faint)" }}>View it under Positions &amp; Orders.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,10,22,0.55)" }} onClick={onClose}>
@@ -181,8 +232,8 @@ export function OptionsBuilder({ quote, onClose }: { quote: Quote | undefined; o
             {!stockLeg && <button onClick={() => setStockLeg(true)} className="text-[12.5px]" style={{ color: "var(--color-accent)" }}>+ Add 100 shares</button>}
           </div>
 
-          <button className="w-full h-11 rounded-xl font-semibold text-[14px] text-white mt-4" style={{ background: "var(--color-accent)" }}>
-            Review Strategy ({legs.length} {legs.length === 1 ? "leg" : "legs"}{stockLeg ? " + stock" : ""})
+          <button onClick={routeOrder} className="w-full h-11 rounded-xl font-semibold text-[14px] text-white mt-4" style={{ background: "var(--color-accent)" }}>
+            Place Strategy Order · Net {netPerShare >= 0 ? "Debit" : "Credit"} {fmtUSD(Math.abs(netPerShare) * 100, 2)}/contract
           </button>
         </div>
       </div>
