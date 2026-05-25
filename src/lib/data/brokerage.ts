@@ -1,6 +1,7 @@
 import type { BrokerageSource, Order, Position } from "@/lib/types";
 import { INITIAL_POSITIONS } from "./seed";
 import { marketData } from "./marketData";
+import { notifications } from "./notifications";
 
 // Mock brokerage: holds positions and orders in memory, simulates fills.
 // Real BOS brokerage API implements the same BrokerageSource interface.
@@ -40,13 +41,16 @@ class MockBrokerage implements BrokerageSource {
       avgFillPrice: fillsNow ? mkt : undefined,
     };
     this.orders = [order, ...this.orders];
-    if (fillsNow) this.applyFill(order, mkt);
-    else {
+    if (fillsNow) {
+      this.applyFill(order, mkt);
+      notifications.notify("fill", "Order filled", `${draft.side === "buy" ? "Bought" : "Sold"} ${draft.qty} ${draft.symbol}${isOption ? " (option)" : ""} at ~${mkt.toFixed(2)}.`);
+    } else {
       // simulate a working order filling after a short delay
       setTimeout(() => {
         const fillPx = isOption ? mkt : (draft.limitPrice ?? draft.stopPrice ?? mkt);
         order.status = "filled"; order.filledQty = order.qty; order.avgFillPrice = fillPx;
         this.applyFill(order, fillPx);
+        notifications.notify("fill", "Working order filled", `${draft.side === "buy" ? "Bought" : "Sold"} ${draft.qty} ${draft.symbol} at ${fillPx.toFixed(2)}.`);
         this.emit();
       }, 4000);
     }

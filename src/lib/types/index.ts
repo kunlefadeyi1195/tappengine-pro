@@ -188,3 +188,15 @@ export interface CopilotSource {
   approve(id: string): void;
   dismiss(id: string): void;
 }
+
+// ---- Notifications ----
+export type NotificationKind = "fill" | "copilot" | "allocation" | "system" | "alert";
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  createdAt: number;
+  read: boolean;
+}

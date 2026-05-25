@@ -1,7 +1,8 @@
 import type { AccountCompliance, SuitabilityProfile, ModelAllocation, ModelPortfolio, RiskTolerance } from "@/lib/types";
-import { INITIAL_COMPLIANCE, INITIAL_SUITABILITY } from "./seed";
+import { INITIAL_COMPLIANCE, INITIAL_SUITABILITY, fmtUSD } from "./seed";
 import { brokerage } from "./brokerage";
 import { marketData } from "./marketData";
+import { notifications } from "./notifications";
 
 // Advisory account state: compliance gates, suitability profile, model allocations.
 // In production this is the RIA onboarding / CRM system; here it's an in-memory mock
@@ -56,6 +57,7 @@ class AdvisoryStore {
   allocate(model: ModelPortfolio, amount: number) {
     const alloc: ModelAllocation = { id: "alloc_" + Math.random().toString(36).slice(2, 8), modelId: model.id, productType: model.productType, amount, createdAt: Date.now() };
     this.allocations = [alloc, ...this.allocations];
+    notifications.notify("allocation", "Model allocation confirmed", `${fmtUSD(amount, 0)} allocated to ${model.name}.`);
     this.emit();
     return alloc;
   }

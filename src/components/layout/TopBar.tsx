@@ -5,11 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Moon, Sun, LineChart, Briefcase, Layers, Compass, Wallet, Sparkles, RotateCcw } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
-import { useQuotes, useBrokerage, useAdvisory } from "@/lib/hooks/useMarket";
+import { useQuotes, useBrokerage, useAdvisory, useNotifications } from "@/lib/hooks/useMarket";
 import { CASH_BALANCE, fmt } from "@/lib/data/seed";
 import { brokerage } from "@/lib/data/brokerage";
 import { advisory } from "@/lib/data/advisory";
 import { copilot } from "@/lib/data/copilot";
+import { notifications } from "@/lib/data/notifications";
 
 const NAV = [
   { href: "/", label: "Terminal", icon: LineChart },
@@ -25,9 +26,12 @@ export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
   const quotes = useQuotes();
   const { positions } = useBrokerage();
   const { allocations } = useAdvisory();
+  const notifs = useNotifications();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unread = notifs.filter((n) => !n.read).length;
 
-  const doReset = () => { brokerage.reset(); advisory.reset(); copilot.reset(); setConfirmReset(false); };
+  const doReset = () => { brokerage.reset(); advisory.reset(); copilot.reset(); notifications.reset(); setConfirmReset(false); };
 
   // Live portfolio metrics reconciled with actual positions, cash, and allocations.
   const equityRows = positions.filter((p) => (p.instrument ?? "equity") === "equity");
@@ -71,25 +75,54 @@ export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
         <button onClick={onOpenCopilot} className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-[12px] font-semibold text-white" style={{ background: "linear-gradient(135deg,#5a72ff,#b79cff)" }} aria-label="AI Copilot">
           <Sparkles size={14} /> Copilot
         </button>
-        <button className="relative" aria-label="Notifications">
-          <Bell size={18} style={{ color: "var(--color-dim)" }} />
-          <span className="absolute -top-1.5 -right-1.5 text-[9px] font-bold w-[15px] h-[15px] rounded-full flex items-center justify-center text-white"
-            style={{ background: "var(--color-accent)" }}>3</span>
-        </button>
+        <div className="relative">
+          <button onClick={() => { setNotifOpen(!notifOpen); }} className="relative" aria-label="Notifications">
+            <Bell size={18} style={{ color: "var(--color-dim)" }} />
+            {unread > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 text-[9px] font-bold w-[15px] h-[15px] rounded-full flex items-center justify-center text-white"
+                style={{ background: "var(--color-accent)" }}>{unread}</span>
+            )}
+          </button>
+          {notifOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+              <div className="absolute right-0 mt-2 w-[340px] rounded-2xl z-50 overflow-hidden shadow-xl" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--color-line)" }}>
+                  <span className="text-[13.5px] font-semibold">Notifications</span>
+                  {unread > 0 && <button onClick={() => notifications.markAllRead()} className="text-[11.5px] font-medium" style={{ color: "var(--color-accent)" }}>Mark all read</button>}
+                </div>
+                <div className="max-h-[360px] overflow-auto sc">
+                  {notifs.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-[12.5px]" style={{ color: "var(--color-faint)" }}>No notifications.</div>
+                  ) : notifs.map((n) => (
+                    <button key={n.id} onClick={() => notifications.markRead(n.id)} className="w-full text-left px-4 py-3 border-b flex gap-2.5" style={{ borderColor: "var(--color-subtle)", background: n.read ? "transparent" : "var(--color-inset)" }}>
+                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: n.read ? "transparent" : "var(--color-accent)" }} />
+                      <span>
+                        <span className="block text-[12.5px] font-semibold">{n.title}</span>
+                        <span className="block text-[11.5px] mt-0.5" style={{ color: "var(--color-dim)" }}>{n.body}</span>
+                        <span className="block text-[10.5px] mt-1" style={{ color: "var(--color-faint)" }}>{timeAgo(n.createdAt)}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
         <button onClick={toggle} className="p-1.5 rounded-lg border" style={{ borderColor: "var(--color-line)", color: "var(--color-dim)" }} aria-label="Toggle theme">
           {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
         </button>
         <button onClick={() => setConfirmReset(true)} className="p-1.5 rounded-lg border" style={{ borderColor: "var(--color-line)", color: "var(--color-dim)" }} aria-label="Reset demo" title="Reset demo">
           <RotateCcw size={15} />
         </button>
-        <div className="flex items-center gap-2">
+        <Link href="/account" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-[13px]"
             style={{ background: "linear-gradient(135deg,#6e83ff,#c9ceff)" }}>KF</div>
           <div className="leading-tight">
             <div className="text-[11px]" style={{ color: "var(--color-faint)" }}>Account</div>
             <div className="num text-[12px] font-semibold">23-573010</div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <nav className="flex items-center h-7 px-4 gap-1 border-t" style={{ borderColor: "var(--color-line)" }}>
@@ -127,4 +160,14 @@ export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
       )}
     </div>
   );
+}
+
+function timeAgo(ts: number): string {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }

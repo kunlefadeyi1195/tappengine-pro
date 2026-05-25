@@ -6,6 +6,7 @@ import { marketData } from "@/lib/data/marketData";
 import { brokerage } from "@/lib/data/brokerage";
 import { advisory } from "@/lib/data/advisory";
 import { copilot } from "@/lib/data/copilot";
+import { notifications } from "@/lib/data/notifications";
 
 // Live quotes hook — subscribes to the market data source.
 export function useQuotes(): Record<string, Quote> {
@@ -43,5 +44,14 @@ export function useCopilot() {
     (cb) => copilot.onChange(cb),
     () => copilot.getSnapshot(),
     () => copilot.getSnapshot()
+  );
+}
+
+// Notifications.
+export function useNotifications() {
+  return useSyncExternalStore(
+    (cb) => notifications.onChange(cb),
+    () => notifications.getSnapshot(),
+    () => notifications.getSnapshot()
   );
 }

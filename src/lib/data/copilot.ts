@@ -1,6 +1,7 @@
 import type { CopilotSource, CopilotProposal, CopilotInsight, ProposedAction } from "@/lib/types";
 import { brokerage } from "./brokerage";
 import { marketData } from "./marketData";
+import { notifications } from "./notifications";
 import { fmtUSD } from "./seed";
 
 // Scripted copilot. Detects real conditions from live portfolio state and
@@ -133,6 +134,7 @@ class ScriptedCopilot implements CopilotSource {
       brokerage.placeOrder({ symbol: a.symbol, side: a.side, type: "market", qty: a.qty, tif: "day", instrument: "equity" });
     });
     p.status = "executed";
+    notifications.notify("copilot", "Copilot action approved", `${p.title} — executed and routed for settlement.`);
     this.emit();
   }
 
