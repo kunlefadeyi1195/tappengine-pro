@@ -146,3 +146,45 @@ export interface BrokerageSource {
   placeOrder(draft: Omit<Order, "id" | "status" | "filledQty" | "createdAt">): Order;
   cancelOrder(id: string): void;
 }
+
+// ---- AI Copilot ----
+export type ProposalKind = "concentration" | "drift" | "idle-cash";
+export type ProposalStatus = "proposed" | "approved" | "dismissed" | "executed";
+
+// A single action the copilot proposes, with a compliance rail the user reviews.
+export interface ProposedAction {
+  label: string;          // human description, e.g. "Sell 20 NVDA"
+  symbol: string;
+  side: OrderSide;
+  qty: number;
+  kind: "equity" | "allocation";
+}
+
+export interface CopilotProposal {
+  id: string;
+  kind: ProposalKind;
+  title: string;
+  rationale: string;       // why the AI is suggesting this (plain language)
+  actions: ProposedAction[];
+  complianceChecks: { label: string; pass: boolean }[];
+  estImpact: string;       // e.g. "Reduces semiconductor concentration to 33%"
+  status: ProposalStatus;
+  createdAt: number;
+}
+
+// Ambient insight shown across surfaces (non-actionable, informational).
+export interface CopilotInsight {
+  id: string;
+  tone: "positive" | "warning" | "neutral";
+  text: string;
+}
+
+// The seam: a scripted impl now; a live Claude-API impl drops in later.
+export interface CopilotSource {
+  getInsights(): CopilotInsight[];
+  getProposals(): CopilotProposal[];
+  // ask the copilot to (re)generate proposals from current portfolio state
+  analyze(): void;
+  approve(id: string): void;
+  dismiss(id: string): void;
+}

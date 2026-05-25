@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Moon, Sun, LineChart, Briefcase, Layers, Compass, Wallet } from "lucide-react";
+import { Bell, Moon, Sun, LineChart, Briefcase, Layers, Compass, Wallet, Sparkles } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 
 const METRICS: [string, string, string?][] = [
@@ -21,7 +21,7 @@ const NAV = [
   { href: "/models", label: "Models", icon: Layers },
 ];
 
-export function TopBar() {
+export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
   const { theme, toggle } = useTheme();
   const pathname = usePathname();
   return (
@@ -44,6 +44,9 @@ export function TopBar() {
           ))}
         </div>
 
+        <button onClick={onOpenCopilot} className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-[12px] font-semibold text-white" style={{ background: "linear-gradient(135deg,#5a72ff,#b79cff)" }} aria-label="AI Copilot">
+          <Sparkles size={14} /> Copilot
+        </button>
         <button className="relative" aria-label="Notifications">
           <Bell size={18} style={{ color: "var(--color-dim)" }} />
           <span className="absolute -top-1.5 -right-1.5 text-[9px] font-bold w-[15px] h-[15px] rounded-full flex items-center justify-center text-white"

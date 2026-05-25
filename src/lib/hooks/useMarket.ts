@@ -5,6 +5,7 @@ import type { Quote, Order, Position } from "@/lib/types";
 import { marketData } from "@/lib/data/marketData";
 import { brokerage } from "@/lib/data/brokerage";
 import { advisory } from "@/lib/data/advisory";
+import { copilot } from "@/lib/data/copilot";
 
 // Live quotes hook — subscribes to the market data source.
 export function useQuotes(): Record<string, Quote> {
@@ -33,5 +34,14 @@ export function useAdvisory() {
     (cb) => advisory.onChange(cb),
     () => advisory.getSnapshot(),
     () => advisory.getSnapshot()
+  );
+}
+
+// AI copilot state (insights + proposals).
+export function useCopilot() {
+  return useSyncExternalStore(
+    (cb) => copilot.onChange(cb),
+    () => copilot.getSnapshot(),
+    () => copilot.getSnapshot()
   );
 }
