@@ -142,6 +142,12 @@ class ScriptedCopilot implements CopilotSource {
   }
 
   hasAnalyzed() { return this.analyzed; }
+
+  reset() {
+    this.proposals = [];
+    this.analyzed = false;
+    this.emit();
+  }
 }
 
 export const copilot = new ScriptedCopilot();

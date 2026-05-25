@@ -75,6 +75,13 @@ class AdvisoryStore {
   totalAllocated(modelId: string) {
     return this.allocations.filter((a) => a.modelId === modelId).reduce((s, a) => s + a.amount, 0);
   }
+
+  reset() {
+    this.compliance = { ...INITIAL_COMPLIANCE };
+    this.suitability = { ...INITIAL_SUITABILITY };
+    this.allocations = [];
+    this.emit();
+  }
 }
 
 export const advisory = new AdvisoryStore();

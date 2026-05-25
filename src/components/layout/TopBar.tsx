@@ -1,17 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Moon, Sun, LineChart, Briefcase, Layers, Compass, Wallet, Sparkles } from "lucide-react";
+import { Bell, Moon, Sun, LineChart, Briefcase, Layers, Compass, Wallet, Sparkles, RotateCcw } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
-
-const METRICS: [string, string, string?][] = [
-  ["Morning Value", "12,420"],
-  ["Online Value", "14,690"],
-  ["Free Margin", "20,440"],
-  ["Daily PNL", "820.44", "up"],
-  ["Buying power", "168,420"],
-];
+import { useQuotes, useBrokerage, useAdvisory } from "@/lib/hooks/useMarket";
+import { CASH_BALANCE, fmt } from "@/lib/data/seed";
+import { brokerage } from "@/lib/data/brokerage";
+import { advisory } from "@/lib/data/advisory";
+import { copilot } from "@/lib/data/copilot";
 
 const NAV = [
   { href: "/", label: "Terminal", icon: LineChart },
@@ -24,6 +22,32 @@ const NAV = [
 export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
   const { theme, toggle } = useTheme();
   const pathname = usePathname();
+  const quotes = useQuotes();
+  const { positions } = useBrokerage();
+  const { allocations } = useAdvisory();
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const doReset = () => { brokerage.reset(); advisory.reset(); copilot.reset(); setConfirmReset(false); };
+
+  // Live portfolio metrics reconciled with actual positions, cash, and allocations.
+  const equityRows = positions.filter((p) => (p.instrument ?? "equity") === "equity");
+  const equityValue = equityRows.reduce((a, p) => a + p.shares * (quotes[p.symbol]?.price ?? p.avgCost), 0);
+  const dayPnl = equityRows.reduce((a, p) => a + p.shares * (quotes[p.symbol]?.change ?? 0), 0);
+  const openPnl = equityRows.reduce((a, p) => a + p.shares * ((quotes[p.symbol]?.price ?? p.avgCost) - p.avgCost), 0);
+  const allocated = allocations.reduce((a, x) => a + x.amount, 0);
+  const cash = Math.max(0, CASH_BALANCE - allocated);
+  const totalValue = equityValue + allocated + cash;
+  const prevValue = totalValue - dayPnl;
+  const dayPct = prevValue > 0 ? (dayPnl / prevValue) * 100 : 0;
+
+  const METRICS: [string, string, string?][] = [
+    ["Account Value", fmt(totalValue, 0)],
+    ["Day P&L", (dayPnl >= 0 ? "+" : "-") + fmt(Math.abs(dayPnl), 0) + ` (${dayPct >= 0 ? "+" : ""}${fmt(dayPct, 2)}%)`, dayPnl >= 0 ? "up" : "down"],
+    ["Open P&L", (openPnl >= 0 ? "+" : "-") + fmt(Math.abs(openPnl), 0), openPnl >= 0 ? "up" : "down"],
+    ["In Models", fmt(allocated, 0)],
+    ["Buying Power", fmt(cash, 0)],
+  ];
+
   return (
     <div className="border-b" style={{ borderColor: "var(--color-line)", background: "var(--color-panel)" }}>
       <div className="flex items-center h-14 px-4 gap-6">
@@ -55,6 +79,9 @@ export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
         <button onClick={toggle} className="p-1.5 rounded-lg border" style={{ borderColor: "var(--color-line)", color: "var(--color-dim)" }} aria-label="Toggle theme">
           {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
         </button>
+        <button onClick={() => setConfirmReset(true)} className="p-1.5 rounded-lg border" style={{ borderColor: "var(--color-line)", color: "var(--color-dim)" }} aria-label="Reset demo" title="Reset demo">
+          <RotateCcw size={15} />
+        </button>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-[13px]"
             style={{ background: "linear-gradient(135deg,#6e83ff,#c9ceff)" }}>KF</div>
@@ -85,6 +112,19 @@ export function TopBar({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
           <span className="animate-pulse-dot w-[7px] h-[7px] rounded-full" style={{ background: "var(--color-up)" }} /> Markets live
         </div>
       </nav>
+
+      {confirmReset && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(7,10,22,0.55)" }} onClick={() => setConfirmReset(false)}>
+          <div className="rounded-2xl w-full max-w-[380px] p-5 animate-slide-in" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 text-[15px] font-semibold mb-1.5"><RotateCcw size={16} style={{ color: "var(--color-accent)" }} /> Reset demo</div>
+            <p className="text-[12.5px] mb-4" style={{ color: "var(--color-dim)" }}>Restores the starting portfolio and clears all orders, model allocations, suitability answers, and copilot actions. Use this between demos so each viewer starts fresh.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmReset(false)} className="flex-1 h-10 rounded-lg text-[13px] font-medium" style={{ background: "var(--color-subtle)", color: "var(--color-dim)" }}>Cancel</button>
+              <button onClick={doReset} className="flex-1 h-10 rounded-lg text-[13px] font-semibold text-white" style={{ background: "var(--color-accent)" }}>Reset to clean state</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

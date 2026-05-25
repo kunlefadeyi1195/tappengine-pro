@@ -88,6 +88,12 @@ class MockBrokerage implements BrokerageSource {
     const o = this.orders.find((x) => x.id === id);
     if (o && o.status === "working") { o.status = "canceled"; this.emit(); }
   }
+
+  reset() {
+    this.positions = [...INITIAL_POSITIONS];
+    this.orders = [];
+    this.emit();
+  }
 }
 
 export const brokerage = new MockBrokerage();
